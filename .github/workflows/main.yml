@@ -2,6 +2,8 @@ name: Create new release
 
 on: [push]
 
+env:
+  image-tarball: desc-rail-docker.tar
 jobs:
   Make-Release:
     runs-on: ubuntu-latest
@@ -30,11 +32,12 @@ jobs:
         run: |
           cp conda-*.lock Docker/
           cp install_rail.py Docker/
-      - uses: docker/build-push-action@v6
-        with:
-          tags: desc-rail:${{github.ref_name}}
-          outputs: type=docker,dest=desc-rail_${{github.ref_name}}.tar
-          file: Docker/Dockerfile
+          docker buildx create --name container --driver=docker-container
+          docker buildx build \
+            --builder container  \
+            --output type=docker,dest=${{env.image-tarball}} \
+            --tag desc-rail:${{github.ref_name}} \
+            -- Docker/
 
       # checks
       - name: test docker image build
