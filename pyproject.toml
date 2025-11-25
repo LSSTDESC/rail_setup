@@ -1,0 +1,23 @@
+[project]
+name    = "rail-installation-script"
+version = "0.0.1"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+strict                 = true
+disallow_untyped_calls = false          # override strict
+disable_error_code     = ["union-attr"]
+
+[tool.pylint]
+"messages control".disable = [
+    "line-too-long",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-positional-arguments",
+    "unnecessary-lambda-assignment",
+    "wrong-import-position",
+]
+reports.output-format = "colorized"
