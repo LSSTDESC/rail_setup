@@ -3,7 +3,8 @@ name: Create new release
 on: [push]
 
 env:
-  image-tarball: desc-rail-docker.tar
+  image-tarball: desc-rail-${{github.ref_name}}-docker.tar
+
 jobs:
   Make-Release:
     runs-on: ubuntu-latest
@@ -44,3 +45,16 @@ jobs:
         run: docker image ls
       - name: test lockfiles
         run: ls
+
+      # make the release
+      - name: GH Release
+        uses: softprops/action-gh-release@v2.4.2
+        with:
+          draft: true
+          # make_latest: true # can't be combined w/ prerelease/draft
+          files: |
+            install_rail.py
+            conda-lock/environment.yml
+            conda-linux-64.lock
+            conda-osx-arm64.lock
+            ${{env.image-tarball}}
