@@ -20,6 +20,12 @@ jobs:
         run: |
           conda install --channel conda-forge --yes -- conda-lock
 
+      - name: test workspace
+        run: ls ${{github.workspace}}
+
+      - name: test cwd
+        run: ls
+
       - name: generate lockfiles
         run: |
           conda-lock lock \
