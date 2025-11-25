@@ -3,7 +3,7 @@ name: Create new release
 on: [push]
 
 jobs:
-  Make release:
+  Make-Release:
     runs-on: ubuntu-latest
     defaults:
       run:
