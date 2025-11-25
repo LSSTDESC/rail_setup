@@ -1,0 +1,25 @@
+name: Create new release
+
+on: [push]
+
+jobs:
+  Generate-Lockfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: conda-incubator/setup-miniconda@v3.2.0
+
+      - name: populate conda env
+        run: |
+          conda install --channel conda-forge --yes -- conda-lock
+
+      - name: generate lockfiles
+        run: |
+          conda-lock lock |
+            --kind explicit |
+            --platform linux-64 --platform osx-arm64 |
+            --file environment.yml
+
+      - name: test lockfiles
+        run: ls ${{github.workspace}}
