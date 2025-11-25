@@ -3,44 +3,33 @@ name: Create new release
 on: [push]
 
 jobs:
-  Generate-Lockfiles:
+  Make release:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -el {0} # for conda, since otherwise default is sh
 
     steps:
+      # setup
       - uses: actions/checkout@v6
-
       - uses: conda-incubator/setup-miniconda@v3.2.0
         with:
           conda-remove-defaults: true # not required, but avoids a warning
 
-      - name: populate conda env
-        run: |
-          conda install --channel conda-forge --yes -- conda-lock
-
+      # lockfiles
       - name: generate lockfiles
         run: |
-          conda-lock lock \
-            --kind explicit \
+          conda install --channel conda-forge --yes -- conda-lock
+          conda-lock lock --kind explicit \
             --platform linux-64 --platform osx-arm64 \
             --file conda-lock/environment.yml
 
-      - name: test lockfiles
-        run: ls ${{github.workspace}}
-
-  Build-Docker-Image:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
+      # docker image
       - name: Build the Docker Image
-        run: docker buildx build --tag desc-rail:${{github.ref}} -- Docker/
+        run: docker buildx build --tag desc-rail:${{github.ref_name}} -- Docker/
 
+      # checks
       - name: test docker image build
         run: docker image ls
-
       - name: test lockfiles
         run: ls
