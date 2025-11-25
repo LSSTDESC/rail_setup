@@ -1,6 +1,6 @@
 name: Create new release
 
-on: [push]
+on: push # to be changed to tag?
 
 env:
   image-tarball: desc-rail-${{github.ref_name}}-docker.tar
@@ -40,21 +40,14 @@ jobs:
             --tag desc-rail:${{github.ref_name}} \
             -- Docker/
 
-      # checks
-      - name: test docker image build
-        run: docker image ls
-      - name: test lockfiles
-        run: ls
-
       # make the release
       - name: GH Release
         uses: softprops/action-gh-release@v2.4.2
         with:
           draft: true
           # make_latest: true # can't be combined w/ prerelease/draft
-          files: |
-            install_rail.py
-            conda-lock/environment.yml
-            conda-linux-64.lock
-            conda-osx-arm64.lock
-            ${{env.image-tarball}}
+          # files: |
+          #   install_rail.py
+          #   conda-linux-64.lock
+          #   conda-osx-arm64.lock
+          #   ${{env.image-tarball}}
