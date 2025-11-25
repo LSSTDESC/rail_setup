@@ -30,7 +30,7 @@ jobs:
       # docker image
       - name: Build the Docker Image
         run: |
-          cp conda-*.lock.yml Docker/
+          cp conda-*.lock Docker/
           cp install_rail.py Docker/
           docker buildx build --tag desc-rail:${{github.ref_name}} -- Docker/
 

@@ -639,7 +639,7 @@ class Installer:
         environment_file = "https://raw.githubusercontent.com/LSSTDESC/rail/refs/heads/main/environment.yml"
 
         kernel, architecture = self.uname_convert("conda-lock")
-        lockfile = f"lockfiles/conda-{kernel}-{architecture}.lock.yml"
+        lockfile = f"lockfiles/conda-{kernel}-{architecture}.lock"
 
         # only because local? there is no explicit linux arm lockfile so that would also
         # be a fallback, but not sure how we want to test for the existence of a remote lockfile
