@@ -1,6 +1,6 @@
 [project]
 name    = "rail-installation-script"
-version = "0.0.1"
+version = "0.0.2"
 
 [tool.isort]
 profile = "black"
@@ -12,6 +12,7 @@ disable_error_code     = ["union-attr"]
 
 [tool.pylint]
 "messages control".disable = [
+    "fixme",
     "line-too-long",
     "too-many-arguments",
     "too-many-instance-attributes",

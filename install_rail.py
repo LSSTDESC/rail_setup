@@ -47,37 +47,24 @@ from typing import Any
 
 #  --- Modified from install-poetry.py ---
 FOREGROUND_COLORS = {
-    # "black": 30,
     "red": 31,
-    # "green": 32,
-    # "yellow": 33,
     "blue": 34,
     "magenta": 35,
     "cyan": 36,
-    # "white": 37,
 }
-OPTIONS = {"invert": 7}
 
 
-def style(fg: str | None, invert: bool | None) -> str:
+def style(fg: str) -> str:
     """Combine a set of ASCII colour codes"""
-    codes = []
-
-    if fg:
-        codes.append(FOREGROUND_COLORS[fg])
-    if invert:
-        codes.append(OPTIONS["invert"])
-
-    codes_string = ";".join(map(str, codes))
-    return f"\033[{codes_string}m"
+    return f"\033[{FOREGROUND_COLORS[fg]}m"
 
 
 STYLES = {
-    "error": style("red", False),  # error messages
-    "cmd": style("cyan", False),  # cli commands
-    "path": style("cyan", False),  # filesystem paths
-    "question": style("magenta", False),  # for `request_input`
-    "highlight": style("blue", False),
+    "error": style("red"),  # error messages
+    "cmd": style("cyan"),  # cli commands
+    "path": style("cyan"),  # filesystem paths
+    "question": style("magenta"),  # for `request_input`
+    "highlight": style("blue"),
 }
 
 
@@ -112,7 +99,7 @@ ERROR_MISSING_PREREQUISITES = """
 Missing prerequisite(s): {missing}
 
 See the RAIL documentation page on required programs for more information.
-"""
+"""  # TODO: add further RAIL documentation and link
 ERROR_NO_CLANG = """
 Only GNU versions of C compilers are supported, but `{version_command}` found an LLVM
 (clang) compiler.
@@ -142,7 +129,7 @@ and the error message is vague, this may be related to hardware specifications. 
 visit the RAIL documentation on minimum requirements.
 
 Working with the RAIL virtual environment requires at least 4GiB of RAM, and 5GiB of free storage.
-"""
+"""  # TODO: add further RAIL documentation and link
 ERROR_ENV_MANAGER_EXISTS_WITHOUT_PATH = """
 \n`{env_manager} is not present in $PATH, but an activation script exists at
 {activation_script_path}. Follow the {env_manager} instructions for initializing your
@@ -171,12 +158,13 @@ session or activate your shell's init script (with `{source_cmd}` or similar).
 To enter the {env_name} virtual environment, run: `{activation_cmd}`
 
 To install additional packages:
-- From conda-forge (link) `{packages_conda_cmd}`
-- From PyPI (link) `{packages_pip_cmd}`
+- From conda-forge (https://anaconda.org) `{packages_conda_cmd}`
+- From PyPI (https://pypi.org) `{packages_pip_cmd}`
 
 In the environment you also have access to the rail cli.
 """
-    + f"Run `{colorize('cmd','rail --help')}` and visit the documentation [link]."
+    + f"""Run `{colorize('cmd','rail --help')}` and visit the documentation:
+https://rail-hub.readthedocs.io/en/latest/source/rail_cli.html"""
 )
 
 
@@ -636,20 +624,17 @@ class Installer:
         solver.
         """
 
-        environment_file = "https://raw.githubusercontent.com/LSSTDESC/rail/refs/heads/main/environment.yml"
+        lockfile_url_base = (
+            "https://github.com/sidratresearch/rail_setup/releases/latest/download"
+        )
 
         kernel, architecture = self.uname_convert("conda-lock")
-        lockfile = f"lockfiles/conda-{kernel}-{architecture}.lock"
-
-        # only because local? there is no explicit linux arm lockfile so that would also
-        # be a fallback, but not sure how we want to test for the existence of a remote lockfile
-        if not Path(lockfile).exists():
-            lockfile = environment_file
+        lockfile_url = f"{lockfile_url_base}/conda-{kernel}-{architecture}.lock"
 
         print_header(
             f"Creating a new {self.env_manager.executable} environment, this may take up to 10 minutes"
         )
-        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile} --yes"
+        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile_url} --yes"
         as_comment = False
         if self.dry_run:
             if self.env_manager_preinitialized:
@@ -932,7 +917,7 @@ def check_requirements() -> str:
             return_code=127,
         )
 
-    # check that c compilers are gnu
+    # check that c compilers are gnu, as required by some dependencies (namely treecorr)
     for compiler in [os.environ.get("CC", "gcc"), os.environ.get("CXX", "g++")]:
         version_command = f"{compiler} --version"
         version_output = run_cmd(
