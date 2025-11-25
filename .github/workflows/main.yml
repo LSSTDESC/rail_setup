@@ -24,15 +24,17 @@ jobs:
           conda-lock lock --kind explicit \
             --platform linux-64 --platform osx-arm64 \
             --file conda-lock/environment.yml
-      - name: test lockfiles
-        run: ls
 
       # docker image
       - name: Build the Docker Image
         run: |
           cp conda-*.lock Docker/
           cp install_rail.py Docker/
-          docker buildx build --tag desc-rail:${{github.ref_name}} -- Docker/
+      - uses: docker/build-push-action@v6
+        with:
+          tags: desc-rail:${{github.ref_name}}
+          outputs: type=docker,dest=desc-rail_${{github.ref_name}}.tar
+          file: Docker/Dockerfile
 
       # checks
       - name: test docker image build
