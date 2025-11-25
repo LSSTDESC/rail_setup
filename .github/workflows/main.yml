@@ -5,10 +5,16 @@ on: [push]
 jobs:
   Generate-Lockfiles:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0} # for conda, since otherwise default is sh
+
     steps:
       - uses: actions/checkout@v6
 
       - uses: conda-incubator/setup-miniconda@v3.2.0
+        with:
+          conda-remove-defaults: true # not required, but avoids a warning
 
       - name: populate conda env
         run: |
@@ -16,9 +22,9 @@ jobs:
 
       - name: generate lockfiles
         run: |
-          conda-lock lock |
-            --kind explicit |
-            --platform linux-64 --platform osx-arm64 |
+          conda-lock lock \
+            --kind explicit \
+            --platform linux-64 --platform osx-arm64 \
             --file environment.yml
 
       - name: test lockfiles
