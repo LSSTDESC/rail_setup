@@ -22,9 +22,9 @@ USER $LSST_USER
 
 # run the rail install script
 ENV SHELL=/bin/bash
-RUN --mount=type=bind,source=../install_rail.py,target=install_rail.py \
-    --mount=type=bind,source=../conda-linux-64.lock.yml,target=lockfiles/conda-linux-64.lock.yml \
-    --mount=type=bind,source=../conda-osx-arm64.lock.yml,target=lockfiles/conda-osx-arm64.lock.yml \
+RUN --mount=type=bind,source=install_rail.py,target=install_rail.py \
+    --mount=type=bind,source=conda-linux-64.lock.yml,target=conda-linux-64.lock.yml \
+    --mount=type=bind,source=conda-osx-arm64.lock.yml,target=conda-osx-arm64.lock.yml \
     ./install_rail.py --install-conda $RAIL_CONDA --env-name $RAIL_ENV --rail-packages all --install-devtools yes --verbose --clean
 
 # prepare for interactive use
