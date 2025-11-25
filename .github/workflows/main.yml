@@ -25,6 +25,8 @@ jobs:
             --file conda-lock/environment.yml
 
       # docker image
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v3.11.1
       - name: Build the Docker Image
         run: docker buildx build --tag desc-rail:${{github.ref_name}} -- Docker/
 
