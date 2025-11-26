@@ -669,7 +669,6 @@ class Installer:
         grouped_packages = choose_additional_dependencies(devtool_selection)
 
         print(f"Installing `{colorize('cmd','pip')}` packages")
-        self.run_in_env_cmd("python -m ensurepip --upgrade", as_comment=self.dry_run)
         if len(grouped_packages) > 0:
             self.pip_install_package(" ".join(grouped_packages))
 

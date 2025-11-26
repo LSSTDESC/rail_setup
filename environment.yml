@@ -16,3 +16,4 @@ dependencies:
   - jax
   - jaxlib
   - somoclu
+  - pip
