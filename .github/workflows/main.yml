@@ -39,23 +39,15 @@ jobs:
           tags: desc-rail:${{github.ref_name}}
           outputs: type=docker,dest=${{env.image-tarball}}
 
-      # - name: Build the Docker Image
-      #   run: |
-      #     docker buildx create --name container --driver=docker-container
-      #     docker buildx build \
-      #       --builder container  \
-      #       --output type=docker,dest=${{env.image-tarball}} \
-      #       --tag desc-rail:${{github.ref_name}} \
-      #       -- Docker/
-
       # make the release
       - name: GH Release
         uses: softprops/action-gh-release@v2.4.2
         with:
           draft: true
           # make_latest: true # can't be combined w/ prerelease/draft
-          # files: |
-          #   install_rail.py
-          #   conda-linux-64.lock
-          #   conda-osx-arm64.lock
-          #   ${{env.image-tarball}}
+          body: "To test out the RAIL installation script, download and run the below install_rail.py."
+          files: |
+            install_rail.py
+            conda-linux-64.lock
+            conda-osx-arm64.lock
+            ${{env.image-tarball}}
