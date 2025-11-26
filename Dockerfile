@@ -32,7 +32,7 @@ RUN ./install_rail.py \
         --install-conda $RAIL_CONDA \
         --env-name $RAIL_ENV \
         --rail-packages all \
-        --install-devtools yes
+        --install-devtools yes \
         --verbose --clean --local-lockfiles
 
 # cleanup after running
