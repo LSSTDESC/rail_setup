@@ -26,7 +26,7 @@ jobs:
           conda install --channel conda-forge --yes -- conda-lock
           conda-lock lock --kind explicit \
             --platform linux-64 --platform osx-arm64 \
-            --file environment.yml
+            --file environment.yml \
             --filename-template conda-{platform}.lock.yml
 
       # docker image
