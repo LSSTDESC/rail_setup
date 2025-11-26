@@ -30,14 +30,20 @@ jobs:
             --filename-template conda-{platform}.lock.yml
 
       # docker image
-      - name: Build the Docker Image
-        run: |
-          docker buildx create --name container --driver=docker-container
-          docker buildx build \
-            --builder container  \
-            --output type=docker,dest=${{env.image-tarball}} \
-            --tag desc-rail:${{github.ref_name}} \
-            -- Docker/
+      - uses: docker/build-push-action@v6
+        with:
+          push: false
+          tags: desc-rail:${{github.ref_name}}
+          outputs: type=docker,dest=${{env.image-tarball}}
+
+      # - name: Build the Docker Image
+      #   run: |
+      #     docker buildx create --name container --driver=docker-container
+      #     docker buildx build \
+      #       --builder container  \
+      #       --output type=docker,dest=${{env.image-tarball}} \
+      #       --tag desc-rail:${{github.ref_name}} \
+      #       -- Docker/
 
       # make the release
       - name: GH Release

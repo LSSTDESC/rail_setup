@@ -20,14 +20,25 @@ RUN groupadd --system --gid 999 $LSST_GROUP
 RUN useradd --no-log-init --create-home --system --uid 999 --gid $LSST_GROUP $LSST_USER
 USER $LSST_USER
 
+COPY install_rail.py install_rail.py
+COPY conda-linux-64.lock conda-linux-64.lock
+COPY conda-osx-arm64.lock conda-osx-arm64.lock
+
 # run the rail install script
 # The installation script will always try to pull the lockfiles from github, need to
 # change this
 # ENV SHELL=/bin/bash
-# RUN --mount=type=bind,source=install_rail.py,target=install_rail.py \
-#     --mount=type=bind,source=conda-linux-64.lock,target=conda-linux-64.lock.yml \
-#     --mount=type=bind,source=conda-osx-arm64.lock,target=conda-osx-arm64.lock.yml \
-#     ./install_rail.py --install-conda $RAIL_CONDA --env-name $RAIL_ENV --rail-packages all --install-devtools yes --verbose --clean
+# RUN ./install_rail.py \
+        # --install-conda $RAIL_CONDA \
+        # --env-name $RAIL_ENV \
+        # --rail-packages all \
+        # --install-devtools yes
+        # --verbose --clean
+RUN cat ./install_rail.py
+
+RUN rm install_rail.py
+RUN rm conda-linux-64.lock
+RUN rm conda-osx-arm64.lock
 
 # prepare for interactive use
 WORKDIR /home/$LSST_USER
