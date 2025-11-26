@@ -21,20 +21,21 @@ RUN useradd --no-log-init --create-home --system --uid 999 --gid $LSST_GROUP $LS
 USER $LSST_USER
 WORKDIR /home/$LSST_USER
 
+# prepare to run the installation script
+ENV SHELL=/bin/bash
 COPY install_rail.py install_rail.py
 COPY conda-linux-64.lock conda-linux-64.lock
 COPY conda-osx-arm64.lock conda-osx-arm64.lock
 
 # run the rail install script
-# ENV SHELL=/bin/bash
-# RUN ./install_rail.py \
-        # --install-conda $RAIL_CONDA \
-        # --env-name $RAIL_ENV \
-        # --rail-packages all \
-        # --install-devtools yes
-        # --verbose --clean --local-lockfiles
-RUN cat ./install_rail.py
+RUN ./install_rail.py \
+        --install-conda $RAIL_CONDA \
+        --env-name $RAIL_ENV \
+        --rail-packages all \
+        --install-devtools yes
+        --verbose --clean --local-lockfiles
 
+# cleanup after running
 RUN rm install_rail.py
 RUN rm conda-linux-64.lock
 RUN rm conda-osx-arm64.lock
