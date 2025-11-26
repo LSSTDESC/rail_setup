@@ -28,6 +28,9 @@ jobs:
             --platform linux-64 --platform osx-arm64 \
             --file environment.yml \
 
+      - name: check lockfiles
+        run: ls
+
       # docker image
       - uses: docker/build-push-action@v6
         with:
