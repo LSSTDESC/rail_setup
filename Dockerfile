@@ -26,15 +26,13 @@ COPY conda-linux-64.lock conda-linux-64.lock
 COPY conda-osx-arm64.lock conda-osx-arm64.lock
 
 # run the rail install script
-# The installation script will always try to pull the lockfiles from github, need to
-# change this
 # ENV SHELL=/bin/bash
 # RUN ./install_rail.py \
         # --install-conda $RAIL_CONDA \
         # --env-name $RAIL_ENV \
         # --rail-packages all \
         # --install-devtools yes
-        # --verbose --clean
+        # --verbose --clean --local-lockfiles
 RUN cat ./install_rail.py
 
 RUN rm install_rail.py

@@ -617,7 +617,7 @@ class Installer:
                 validator=lambda name: check_env_name(name, existing_names),
             )
 
-    def create_env(self) -> None:
+    def create_env(self, local_lockfiles: bool) -> None:
         """Create a new Python virtual environment with the RAIL environment.yml
 
         If possible, a lockfile is used to reduce the time spent running the environment
@@ -629,12 +629,15 @@ class Installer:
         )
 
         kernel, architecture = self.uname_convert("conda-lock")
-        lockfile_url = f"{lockfile_url_base}/conda-{kernel}-{architecture}.lock"
+        lockfile_name = f"conda-{kernel}-{architecture}.lock"
+        lockfile_path = (
+            lockfile_name if local_lockfiles else f"{lockfile_url_base}/{lockfile_name}"
+        )
 
         print_header(
             f"Creating a new {self.env_manager.executable} environment, this may take up to 10 minutes"
         )
-        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile_url} --yes"
+        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile_path} --yes"
         as_comment = False
         if self.dry_run:
             if self.env_manager_preinitialized:
@@ -722,6 +725,7 @@ class Installer:
         self,
         env_manager_to_install: str | None,
         env_name: str | None,
+        local_lockfiles: bool,
         rail_selection: str | list[str] | None,
         devtool_selection: str | None,
         clean: bool,
@@ -731,7 +735,7 @@ class Installer:
         try:
             self.find_env_manager(name_to_install=env_manager_to_install)
             self.choose_env_name(env_name=env_name)
-            self.create_env()
+            self.create_env(local_lockfiles=local_lockfiles)
             self.pip_install(
                 rail_selection=rail_selection, devtool_selection=devtool_selection
             )
@@ -1074,8 +1078,16 @@ def main() -> int:
     )
     parser.add_argument(
         "--clean",
-        help="ClI-only option, intended for containerization. Clear conda and pip caches post-install",
+        help="""CLI-only option, intended for containerization. Clear conda and pip
+             caches post-install""",
         dest="clean",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--local-lockfiles",
+        help="""CLI-only option, intended for containerization. Only uses locally
+             available lockfiles to generate the Conda environment""",
+        dest="local_lockfiles",
         action="store_true",
     )
     parser.add_argument(
@@ -1131,6 +1143,7 @@ def main() -> int:
     installer.run(
         env_manager_to_install=args.to_install,
         env_name=args.env_name,
+        local_lockfiles=args.local_lockfiles,
         rail_selection=args.rail_packages,
         devtool_selection=args.install_devtools,
         clean=args.clean,
