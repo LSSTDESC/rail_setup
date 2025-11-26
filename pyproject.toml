@@ -1,6 +1,6 @@
 [project]
 name    = "rail-installation-script"
-version = "0.0.3"
+version = "0.0.4"
 
 [tool.isort]
 profile = "black"

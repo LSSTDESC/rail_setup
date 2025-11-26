@@ -624,20 +624,27 @@ class Installer:
         solver.
         """
 
-        lockfile_url_base = (
-            "https://github.com/sidratresearch/rail_setup/releases/latest/download"
-        )
-
         kernel, architecture = self.uname_convert("conda-lock")
         lockfile_name = f"conda-{kernel}-{architecture}.lock"
-        lockfile_path = (
-            lockfile_name if local_lockfiles else f"{lockfile_url_base}/{lockfile_name}"
-        )
+
+        # download lock file from github
+        # necessary since the release links open a download popup instead of giving raw
+        # files, so conda can't use these directly
+        if not local_lockfiles:
+            lockfile_url_base = (
+                "https://github.com/sidratresearch/rail_setup/releases/latest/download"
+            )
+            remote_lockfile_name = lockfile_name
+            lockfile_name = f"install_rail.{lockfile_name}"  # attempt to avoid name collision with existing files
+            self.run_fetch_cmd(
+                f"{lockfile_url_base}/{remote_lockfile_name}", lockfile_name
+            )
 
         print_header(
             f"Creating a new {self.env_manager.executable} environment, this may take up to 10 minutes"
         )
-        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile_path} --yes"
+        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile_name} --yes"
+
         as_comment = False
         if self.dry_run:
             if self.env_manager_preinitialized:
@@ -648,6 +655,10 @@ class Installer:
             create_env_cmd += " --quiet"
 
         self.run_env_manager_cmd(create_env_cmd, as_comment=as_comment)
+
+        if not local_lockfiles:
+            # delete the downloaded lockfile if necessary
+            Path(lockfile_name).unlink()
 
     def pip_install(
         self,
