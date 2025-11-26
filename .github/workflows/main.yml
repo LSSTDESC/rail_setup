@@ -4,6 +4,7 @@ on: push # to be changed to tag?
 
 env:
   image-tarball: desc-rail-${{github.ref_name}}-docker.tar
+  image-tag: desc-rail:${{github.ref_name}}
   artifact-lockfiles: lockfiles
   artifact-docker-image: docker-image
 
@@ -50,7 +51,7 @@ jobs:
         with:
           context: . # use the current filesystem instead of a fresh checkout
           push: false
-          tags: desc-rail:${{github.ref_name}}
+          tags: ${{env.image-tag}}
           outputs: type=docker,dest=${{env.image-tarball}}
       # upload
       - name: Upload docker image artifact
@@ -78,7 +79,17 @@ jobs:
         with:
           draft: true
           # make_latest: true # can't be combined w/ prerelease/draft
-          body: "To test out the RAIL installation script, download and run the below `install_rail.py`."
+          body: "
+            To test out the RAIL installation script, download and run the below
+            `install_rail.py`.
+
+            To use the RAIL Docker image, download it and run the following commands:
+            ```sh
+            docker image load --input ${{env.image-tarball}}
+            docker container run --interactive --tty ${{env.image-tag}}
+            ```
+            This will enter you into a Python environment with all RAIL packages available.
+            "
           files: |
             install_rail.py
             conda-linux-64.lock
