@@ -34,6 +34,7 @@ jobs:
       # docker image
       - uses: docker/build-push-action@v6
         with:
+          context: . # use the current filesystem instead of a fresh checkout
           push: false
           tags: desc-rail:${{github.ref_name}}
           outputs: type=docker,dest=${{env.image-tarball}}
