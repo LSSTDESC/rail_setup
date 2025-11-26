@@ -31,8 +31,6 @@ jobs:
       # docker image
       - name: Build the Docker Image
         run: |
-          cp conda-*.lock Docker/
-          cp install_rail.py Docker/
           docker buildx create --name container --driver=docker-container
           docker buildx build \
             --builder container  \
