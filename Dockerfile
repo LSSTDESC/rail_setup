@@ -19,6 +19,7 @@ RUN apt update --yes && \
 RUN groupadd --system --gid 999 $LSST_GROUP
 RUN useradd --no-log-init --create-home --system --uid 999 --gid $LSST_GROUP $LSST_USER
 USER $LSST_USER
+WORKDIR /home/$LSST_USER
 
 COPY install_rail.py install_rail.py
 COPY conda-linux-64.lock conda-linux-64.lock
@@ -41,6 +42,5 @@ RUN rm conda-linux-64.lock
 RUN rm conda-osx-arm64.lock
 
 # prepare for interactive use
-WORKDIR /home/$LSST_USER
 RUN echo "\n\n$RAIL_CONDA activate base\n$RAIL_CONDA activate $RAIL_ENV" >> ~/.bashrc
 CMD ["/bin/bash"]
