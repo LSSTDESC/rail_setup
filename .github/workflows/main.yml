@@ -27,7 +27,6 @@ jobs:
           conda-lock lock --kind explicit \
             --platform linux-64 --platform osx-arm64 \
             --file environment.yml \
-            --filename-template conda-{platform}.lock.yml
 
       # docker image
       - uses: docker/build-push-action@v6

@@ -629,7 +629,7 @@ class Installer:
         )
 
         kernel, architecture = self.uname_convert("conda-lock")
-        lockfile_url = f"{lockfile_url_base}/conda-{kernel}-{architecture}.lock.yml"
+        lockfile_url = f"{lockfile_url_base}/conda-{kernel}-{architecture}.lock"
 
         print_header(
             f"Creating a new {self.env_manager.executable} environment, this may take up to 10 minutes"
