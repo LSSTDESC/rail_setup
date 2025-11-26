@@ -1,6 +1,9 @@
-name: Create new release
+name: Create a new release with ready-to-use assets
 
-on: push # to be changed to tag?
+on:
+  push:
+    tags:
+      - "v*.*.*" # run on tag creation
 
 env:
   image-tarball: desc-rail-${{github.ref_name}}-docker.tar
@@ -77,21 +80,15 @@ jobs:
       # release
       - uses: softprops/action-gh-release@v2.4.2
         with:
-          draft: true
-          # make_latest: true # can't be combined w/ prerelease/draft
+          make_latest: true # can't be combined w/ prerelease/draft
           body: "
             To test out the RAIL installation script, download and run the below
             `install_rail.py`.
-
-            To use the RAIL Docker image, download it and run the following commands:
-            ```sh
-            docker image load --input ${{env.image-tarball}}
-            docker container run --interactive --tty ${{env.image-tag}}
-            ```
-            This will enter you into a Python environment with all RAIL packages available.
             "
           files: |
             install_rail.py
             conda-linux-64.lock
             conda-osx-arm64.lock
-            ${{env.image-tarball}}
+
+          # ${{env.image-tarball}} # don't upload this as an artifact, we'll upload it
+          # to the LSST package archive when possible
