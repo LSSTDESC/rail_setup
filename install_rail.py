@@ -389,20 +389,43 @@ class Installer:
         print_header("Checking for a pre-installed Python virtual environment manager")
 
         for env_manager in ENV_MANAGER_INFO:
+            if self.verbose:
+                print(
+                    f"Checking for `{colorize('cmd', env_manager.executable)}` in $PATH"
+                )
+
             executable_path = shutil.which(env_manager.executable)
             in_path = executable_path is not None
 
             activation_script_exists = False
             if env_manager.activation_script is not None:
-                if env_manager.activation_script.exists():  # check default location
-                    activation_script_exists = True
-                elif executable_path is not None:
-                    alt_activation_script = Path(executable_path).with_name("activate")
-                    if (
-                        alt_activation_script.exists()
-                    ):  # check location based on `which`
+                activation_script_paths = [env_manager.activation_script]
+                if executable_path is not None:
+                    activation_script_paths.append(
+                        Path(executable_path).with_name("activate")
+                    )
+                    activation_script_paths.append(
+                        Path(executable_path).parent.parent / "bin/activate"
+                    )
+
+                if self.verbose:
+                    msg = "Checking for `{env_manager}` activation scripts in {paths}"
+                    print(
+                        msg.format(
+                            env_manager=colorize("cmd", env_manager.executable),
+                            paths=", ".join(
+                                [
+                                    colorize("path", str(path))
+                                    for path in activation_script_paths
+                                ]
+                            ),
+                        )
+                    )
+                for path in activation_script_paths:
+                    if path.exists():
                         activation_script_exists = True
-                        env_manager.activation_script = alt_activation_script
+                        env_manager.activation_script = path
+                        break
 
             if in_path or activation_script_exists:
                 self.env_manager = env_manager
