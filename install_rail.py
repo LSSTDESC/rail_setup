@@ -401,12 +401,13 @@ class Installer:
             if env_manager.activation_script is not None:
                 activation_script_paths = [env_manager.activation_script]
                 if executable_path is not None:
-                    activation_script_paths.append(
-                        Path(executable_path).with_name("activate")
-                    )
-                    activation_script_paths.append(
-                        Path(executable_path).parent.parent / "bin/activate"
-                    )
+                    extra_path = Path(executable_path).with_name("activate")
+                    if extra_path not in activation_script_paths:
+                        activation_script_paths.append(extra_path)
+
+                    extra_path = Path(executable_path).parent.parent / "bin/activate"
+                    if extra_path not in activation_script_paths:
+                        activation_script_paths.append(extra_path)
 
                 if self.verbose:
                     msg = "Checking for `{env_manager}` activation scripts in {paths}"
