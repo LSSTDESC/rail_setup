@@ -136,6 +136,14 @@ ERROR_ENV_MANAGER_EXISTS_WITHOUT_PATH = """
 shell, then restart your terminal session.
 """
 
+MESSAGE_ENV_MANAGER_FOUND = """
+Using {env_manager_name} (`{env_manager_command}`) at {env_manager_path} with activation
+script located at {activation_script_path}
+"""
+MESSAGE_NO_ENV_MANAGER_FOUND = """
+Require one of {executables} to be present in $PATH.
+If one of these is already installed, this script cannot find it.
+"""
 MESSAGE_ENV_EXISTS = """
 An environment named {name} already exists.
 Please choose another name, or exit the script, remove the
@@ -145,10 +153,6 @@ https://docs.conda.io/projects/conda/en/stable/commands/env/remove.html
 
 Note that if this script was halted partway through environment creation, environment
 removal may be less straightforward
-"""
-MESSAGE_NO_ENV_MANAGER_FOUND = """
-Require one of {executables} to be present in $PATH.
-If one of these is already installed, this script cannot find it.
 """
 MESSAGE_POST_INSTALL = (
     """
@@ -385,13 +389,20 @@ class Installer:
         print_header("Checking for a pre-installed Python virtual environment manager")
 
         for env_manager in ENV_MANAGER_INFO:
-            in_path = shutil.which(env_manager.executable) is not None
+            executable_path = shutil.which(env_manager.executable)
+            in_path = executable_path is not None
 
-            activation_script_exists = (
-                False
-                if env_manager.activation_script is None
-                else env_manager.activation_script.exists()
-            )
+            activation_script_exists = False
+            if env_manager.activation_script is not None:
+                if env_manager.activation_script.exists():  # check default location
+                    activation_script_exists = True
+                elif executable_path is not None:
+                    alt_activation_script = Path(executable_path).with_name("activate")
+                    if (
+                        alt_activation_script.exists()
+                    ):  # check location based on `which`
+                        activation_script_exists = True
+                        env_manager.activation_script = alt_activation_script
 
             if in_path or activation_script_exists:
                 self.env_manager = env_manager
@@ -399,7 +410,16 @@ class Installer:
                     self.env_manager_preinitialized = True
 
                 print(
-                    f"Using {env_manager.name} ({colorize('cmd', self.env_manager.executable)})"
+                    MESSAGE_ENV_MANAGER_FOUND.format(
+                        env_manager_name=env_manager.name,
+                        env_manager_command=colorize(
+                            "cmd", self.env_manager.executable
+                        ),
+                        env_manager_path=colorize("path", str(executable_path)),
+                        activation_script_path=colorize(
+                            "path", str(env_manager.activation_script)
+                        ),
+                    )
                 )
                 break
 
