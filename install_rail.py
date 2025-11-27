@@ -137,8 +137,8 @@ shell, then restart your terminal session.
 """
 
 MESSAGE_ENV_MANAGER_FOUND = """
-Using {env_manager_name} (`{env_manager_command}`) at {env_manager_path} with activation
-script located at {activation_script_path}
+Using `{env_manager_command}` at path {env_manager_path} with
+activation script located at path {activation_script_path}
 """
 MESSAGE_NO_ENV_MANAGER_FOUND = """
 Require one of {executables} to be present in $PATH.
@@ -411,11 +411,17 @@ class Installer:
 
                 print(
                     MESSAGE_ENV_MANAGER_FOUND.format(
-                        env_manager_name=env_manager.name,
                         env_manager_command=colorize(
                             "cmd", self.env_manager.executable
                         ),
-                        env_manager_path=colorize("path", str(executable_path)),
+                        env_manager_path=colorize(
+                            "path",
+                            (
+                                str(executable_path)
+                                if executable_path is not None
+                                else "unknown"
+                            ),
+                        ),
                         activation_script_path=colorize(
                             "path", str(env_manager.activation_script)
                         ),
