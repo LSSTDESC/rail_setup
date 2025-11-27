@@ -261,27 +261,27 @@ class Installer:
             (kernel, architecture)
         """
 
-        match use_case:
-            case "conda":
-                # https://repo.anaconda.com/miniconda/
-                kernel = "MacOSX" if self.kernel == "Darwin" else "Linux"
-                architecture = (
-                    self.architecture
-                )  # accepts arm64 for mac and aarch64 for linux
-            case "mamba":
-                # https://github.com/conda-forge/miniforge/releases/tag/25.3.1-0
-                kernel, architecture = (
-                    self.kernel,
-                    self.architecture,
-                )  # accepts arm64 for mac and aarch64 for linux
-            case "micromamba":
-                # https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html#linux-and-macos
-                kernel = "osx" if self.kernel == "Darwin" else "linux"
-                architecture = "64" if self.architecture == "x86_64" else "arm64"
-            case "conda-lock":
-                # `conda-lock render`
-                kernel = "osx" if self.kernel == "Darwin" else "linux"
-                architecture = "64" if self.architecture == "x86_64" else "arm64"
+        kernel, architecture = "", ""
+        if use_case == "conda":
+            # https://repo.anaconda.com/miniconda/
+            kernel = "MacOSX" if self.kernel == "Darwin" else "Linux"
+            architecture = (
+                self.architecture
+            )  # accepts arm64 for mac and aarch64 for linux
+        elif use_case == "mamba":
+            # https://github.com/conda-forge/miniforge/releases/tag/25.3.1-0
+            kernel, architecture = (
+                self.kernel,
+                self.architecture,
+            )  # accepts arm64 for mac and aarch64 for linux
+        elif use_case == "micromamba":
+            # https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html#linux-and-macos
+            kernel = "osx" if self.kernel == "Darwin" else "linux"
+            architecture = "64" if self.architecture == "x86_64" else "arm64"
+        elif use_case == "conda-lock":
+            # `conda-lock render`
+            kernel = "osx" if self.kernel == "Darwin" else "linux"
+            architecture = "64" if self.architecture == "x86_64" else "arm64"
 
         return (kernel, architecture)
 
@@ -502,29 +502,27 @@ class Installer:
         """Run preparatory steps to be able to use a Python environment manager."""
 
         print_header(f"Initializing {self.env_manager.executable}")
-        match self.env_manager.executable:
-            case "conda":
-                # accept TOS
-                for channel in [
-                    "https://repo.anaconda.com/pkgs/main",
-                    "https://repo.anaconda.com/pkgs/r",
-                ]:
-                    self.run_env_manager_cmd(
-                        f"conda tos accept --override-channels --channel {channel}",
-                        as_comment=self.dry_run,
-                    )
-
-            case "mamba":
-                shell = str(Path(os.environ["SHELL"]).stem)
-                cmd, as_comment = f"mamba shell init --shell {shell}", False
-                if self.dry_run:
-                    if self.env_manager_preinitialized:
-                        cmd += " --dry-run"
-                    else:
-                        as_comment = True
-                self.run_env_manager_cmd(cmd, as_comment=as_comment)
-            case "micromamba":
-                pass
+        if self.env_manager.executable == "conda":
+            # accept TOS
+            for channel in [
+                "https://repo.anaconda.com/pkgs/main",
+                "https://repo.anaconda.com/pkgs/r",
+            ]:
+                self.run_env_manager_cmd(
+                    f"conda tos accept --override-channels --channel {channel}",
+                    as_comment=self.dry_run,
+                )
+        elif self.env_manager.executable == "mamba":
+            shell = str(Path(os.environ["SHELL"]).stem)
+            cmd, as_comment = f"mamba shell init --shell {shell}", False
+            if self.dry_run:
+                if self.env_manager_preinitialized:
+                    cmd += " --dry-run"
+                else:
+                    as_comment = True
+            self.run_env_manager_cmd(cmd, as_comment=as_comment)
+        elif self.env_manager.executable == "micromamba":
+            pass
 
     def check_env_manager_version(self) -> None:
         """Checks that the installed version of whichever Python environment manager is
@@ -548,19 +546,20 @@ class Installer:
         print_header(f"Verifying {self.env_manager.executable} version")
         fake_version = self.dry_run and not self.env_manager_preinitialized
 
-        match self.env_manager.executable:
-            case "conda":
-                version_cmd = "conda --version"
-                output_to_version = lambda output: output[output.rindex(" ") + 1 :]
-                required_version_string = "23.5.0"
-            case "mamba":
-                version_cmd = "conda --version"
-                output_to_version = lambda output: output[output.rindex(" ") + 1 :]
-                required_version_string = "23.5.0"
-            case "micromamba":
-                version_cmd = f"{self.env_manager.executable} --version"
-                output_to_version = lambda output: output
-                required_version_string = "1.5.8"
+        version_cmd, required_version_string = "", ""
+        output_to_version = lambda output: ""
+        if self.env_manager.executable == "conda":
+            version_cmd = "conda --version"
+            output_to_version = lambda output: output[output.rindex(" ") + 1 :]
+            required_version_string = "23.5.0"
+        elif self.env_manager.executable == "mamba":
+            version_cmd = "conda --version"
+            output_to_version = lambda output: output[output.rindex(" ") + 1 :]
+            required_version_string = "23.5.0"
+        elif self.env_manager.executable == "micromamba":
+            version_cmd = f"{self.env_manager.executable} --version"
+            output_to_version = lambda output: output
+            required_version_string = "1.5.8"
 
         version_result = self.run_env_manager_cmd(
             version_cmd,
