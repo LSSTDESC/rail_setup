@@ -12,8 +12,19 @@ env:
   artifact-docker-image: docker-image
 
 jobs:
+  check-versioning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Check Git tag matches version in source
+        run: exit $(python -c "import install_rail;print(int(install_rail.__version__!='${{github.ref_name}}'))")
+
   build-lockfiles:
     runs-on: ubuntu-latest
+    needs: check-versioning
     defaults:
       run:
         shell: bash -el {0} # for conda, since otherwise default is sh
