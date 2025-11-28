@@ -134,11 +134,6 @@ visit the RAIL documentation on minimum requirements.
 
 Working with the RAIL virtual environment requires at least 4GiB of RAM, and 5GiB of free storage.
 """  # TODO: add further RAIL documentation and link
-ERROR_ENV_MANAGER_EXISTS_WITHOUT_PATH = """
-\n`{env_manager} is not present in $PATH, but an activation script exists at
-{activation_script_path}. Follow the {env_manager} instructions for initializing your
-shell, then restart your terminal session.
-"""
 
 MESSAGE_ENV_MANAGER_FOUND = """
 Using `{env_manager_command}` at path {env_manager_path} with
@@ -183,6 +178,7 @@ class EnvironmentManager:
     # mandatory on creation
     name: str
     installable: bool = field(kw_only=True)
+    needs_activation: bool = field(kw_only=True)
     # optional on creation
     executable: str = field(default="", kw_only=True)
     directory: str | Path | None = field(default=None, kw_only=True)
@@ -201,13 +197,14 @@ class EnvironmentManager:
 
 
 ENV_MANAGER_INFO = [
-    EnvironmentManager("micromamba", installable=False),
+    EnvironmentManager("micromamba", installable=False, needs_activation=False),
     EnvironmentManager(
         "mamba",
         installable=True,
         directory="~/miniforge3",
         installer_link="https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-{kernel}-{architecture}.sh",
         installer_options=["-b", "-u", "-p"],
+        needs_activation=True,
     ),
     EnvironmentManager(
         "miniconda",
@@ -216,9 +213,14 @@ ENV_MANAGER_INFO = [
         executable="conda",
         installer_link="https://repo.anaconda.com/miniconda/Miniconda3-latest-{kernel}-{architecture}.sh",
         installer_options=["-b", "-u", "-c", "-p"],
+        needs_activation=True,
     ),
     EnvironmentManager(
-        "anaconda", installable=False, directory="~/anaconda3", executable="conda"
+        "anaconda",
+        installable=False,
+        directory="~/anaconda3",
+        executable="conda",
+        needs_activation=True,
     ),
 ]
 
@@ -246,7 +248,7 @@ class Installer:
     verbose: bool
 
     env_manager: None | EnvironmentManager = field(default=None, init=False)
-    env_manager_preinitialized: bool = field(default=False, init=False)
+    env_manager_preinstalled: bool = field(default=False, init=False)
     env_name: str = field(init=False)
     kernel: str = os.uname().sysname
     architecture: str = os.uname().machine
@@ -338,18 +340,19 @@ class Installer:
             Raised if the script can't find the environment manager
         """
 
-        if self.env_manager.activation_script is None:
-            if shutil.which(self.env_manager.executable) is not None:
-                # no need to activate, conda is in $PATH already, this probably means
-                # it's init'ed
-                return self.run_cmd(cmd, **kwargs)
-            # something's gone wrong. we don't know where conda is, but we don't
-            # have the activation script either
-            raise RAILInstallationError(
-                "Something went wrong finding/activating the Python virtual environment manager."
+        if self.env_manager.needs_activation:
+            return self.run_cmd(
+                f". {self.env_manager.activation_script} && {cmd}", **kwargs
             )
-        return self.run_cmd(
-            f". {self.env_manager.activation_script} && {cmd}", **kwargs
+
+        if shutil.which(self.env_manager.executable) is not None:
+            # no need to activate, conda is in $PATH already, this probably means
+            # it's init'ed
+            return self.run_cmd(cmd, **kwargs)
+        # something's gone wrong. we don't know where conda is, but we don't
+        # have the activation script either
+        raise RAILInstallationError(
+            "Something went wrong finding/activating the Python virtual environment manager."
         )
 
     def run_in_env_cmd(
@@ -374,6 +377,60 @@ class Installer:
             **kwargs,
         )
 
+    def find_specific_env_manager(
+        self, env_manager: EnvironmentManager
+    ) -> tuple[bool, None | Path]:
+        """Check if a specific environment manager is installed
+
+        Parameters
+        ----------
+        env_manager : EnvironmentManager
+            The one to check for
+
+        Returns
+        -------
+        tuple[bool,None|Path]
+            Whether or not it's in the $PATH, and the location of the activation script
+        """
+        if self.verbose:
+            print(f"Checking for `{colorize('cmd', env_manager.executable)}` in $PATH")
+
+        executable_path = shutil.which(env_manager.executable)
+        in_path = executable_path is not None
+
+        if env_manager.activation_script is None:
+            # don't need to check for an activation script, so we're done
+            return (in_path, None)
+
+        # get potential locations for an activation script
+        activation_script_paths = [env_manager.activation_script]
+        if executable_path is not None:
+            for extra_path in [
+                Path(executable_path).with_name("activate"),
+                Path(executable_path).parent.parent / "bin/activate",
+            ]:
+                if extra_path not in activation_script_paths:
+                    activation_script_paths.append(extra_path)
+        if self.verbose:
+            msg = "Checking for `{env_manager}` activation scripts in {paths}"
+            paths = ", ".join(
+                [colorize("path", str(path)) for path in activation_script_paths]
+            )
+            print(
+                msg.format(
+                    env_manager=colorize("cmd", env_manager.executable),
+                    paths=paths,
+                )
+            )
+
+        # check the paths, returning early if we find one
+        for path in activation_script_paths:
+            if path.exists():
+                return (in_path, path)
+
+        # no activation script found
+        return (in_path, None)
+
     def find_env_manager(self, name_to_install: str | None = None) -> None:
         """Locates a Python environment manager, either from $PATH, or by installing
         one.
@@ -393,83 +450,61 @@ class Installer:
         print_header("Checking for a pre-installed Python virtual environment manager")
 
         for env_manager in ENV_MANAGER_INFO:
-            if self.verbose:
-                print(
-                    f"Checking for `{colorize('cmd', env_manager.executable)}` in $PATH"
-                )
+            in_path, activation_script = self.find_specific_env_manager(env_manager)
 
-            executable_path = shutil.which(env_manager.executable)
-            in_path = executable_path is not None
-
-            activation_script_exists = False
-            if env_manager.activation_script is not None:
-                activation_script_paths = [env_manager.activation_script]
-                if executable_path is not None:
-                    extra_path = Path(executable_path).with_name("activate")
-                    if extra_path not in activation_script_paths:
-                        activation_script_paths.append(extra_path)
-
-                    extra_path = Path(executable_path).parent.parent / "bin/activate"
-                    if extra_path not in activation_script_paths:
-                        activation_script_paths.append(extra_path)
-
-                if self.verbose:
-                    msg = "Checking for `{env_manager}` activation scripts in {paths}"
-                    print(
-                        msg.format(
-                            env_manager=colorize("cmd", env_manager.executable),
-                            paths=", ".join(
-                                [
-                                    colorize("path", str(path))
-                                    for path in activation_script_paths
-                                ]
-                            ),
-                        )
-                    )
-                for path in activation_script_paths:
-                    if path.exists():
-                        activation_script_exists = True
-                        env_manager.activation_script = path
-                        break
-
-            if in_path or activation_script_exists:
+            # check all of the cases where we can exit
+            if (in_path and env_manager.activation_script is None) or (
+                in_path and (activation_script is not None)
+            ):
+                # successfully found a no-activation env manager, or a pre-activated env manager
                 self.env_manager = env_manager
-                if in_path:
-                    self.env_manager_preinitialized = True
-
+                self.env_manager.activation_script = activation_script
+                self.env_manager.needs_activation = False
+                break
+            if in_path and activation_script is None:
                 print(
-                    MESSAGE_ENV_MANAGER_FOUND.format(
-                        env_manager_command=colorize(
-                            "cmd", self.env_manager.executable
-                        ),
-                        env_manager_path=colorize(
-                            "path",
-                            (
-                                str(executable_path)
-                                if executable_path is not None
-                                else "unknown"
-                            ),
-                        ),
-                        activation_script_path=colorize(
-                            "path", str(env_manager.activation_script)
-                        ),
-                    )
+                    f"Found {env_manager.executable} but couldn't find the activation script."
                 )
+                self.env_manager = env_manager
+                self.env_manager.activation_script = activation_script
+                self.env_manager.needs_activation = False
+                break
+            if (not in_path) and activation_script is not None:
+                # found unactivated conda/mamba
+                self.env_manager = env_manager
+                self.env_manager.activation_script = activation_script
+                self.env_manager.needs_activation = True
                 break
 
-        if (self.env_manager is not None) and (name_to_install is not None):
-            error_message = ERROR_ENV_MANAGER_ALREADY_INSTALLED.format(
-                to_install=name_to_install,
-                already_installed=self.env_manager.executable,
-            )
-            if not self.env_manager_preinitialized:
-                error_message += ERROR_ENV_MANAGER_EXISTS_WITHOUT_PATH.format(
-                    env_manager=self.env_manager.executable,
-                    activation_script_path=env_manager.activation_script,
+        if self.env_manager is not None:
+            self.env_manager_preinstalled = True
+            # print success message
+            print("Found a pre-installed Python virtual environment manager")
+            if self.env_manager.needs_activation:
+                executable_path = self.run_env_manager_cmd(
+                    f"which {self.env_manager.executable}", capture_output=True
+                ).stdout.strip()
+            else:
+                executable_path = str(shutil.which(self.env_manager.executable))
+            print(
+                MESSAGE_ENV_MANAGER_FOUND.format(
+                    env_manager_command=colorize("cmd", self.env_manager.executable),
+                    env_manager_path=colorize("path", executable_path),
+                    activation_script_path=colorize(
+                        "path", str(env_manager.activation_script)
+                    ),
                 )
-            raise RAILInstallationError(error_message)
+            )
 
-        if self.env_manager is None:
+            # check if an installation was requested - this is an error
+            if name_to_install is not None:
+                error_message = ERROR_ENV_MANAGER_ALREADY_INSTALLED.format(
+                    to_install=name_to_install,
+                    already_installed=self.env_manager.executable,
+                )
+                raise RAILInstallationError(error_message)
+
+        else:  # install a new env manager
             executables = {e.executable for e in ENV_MANAGER_INFO}
             executable_string = "/".join(
                 [colorize("cmd", exec) for exec in executables]
@@ -547,10 +582,7 @@ class Installer:
             shell = str(Path(os.environ["SHELL"]).stem)
             cmd, as_comment = f"mamba shell init --shell {shell}", False
             if self.dry_run:
-                if self.env_manager_preinitialized:
-                    cmd += " --dry-run"
-                else:
-                    as_comment = True
+                cmd += " --dry-run"
             self.run_env_manager_cmd(cmd, as_comment=as_comment)
 
     def check_env_manager_version(self) -> None:
@@ -573,7 +605,7 @@ class Installer:
         """
 
         print_header(f"Verifying {self.env_manager.executable} version")
-        fake_version = self.dry_run and not self.env_manager_preinitialized
+        fake_version = self.dry_run and not self.env_manager_preinstalled
 
         version_cmd, required_version_string = "", ""
         output_to_version = lambda output: ""
@@ -630,9 +662,13 @@ class Installer:
 
         print_header("Getting virtual environment name")
 
-        if self.env_manager_preinitialized:
+        # for a dry run where the script installed conda, we can't check for
+        # pre-existing environments
+        if self.dry_run and not self.env_manager_preinstalled:
+            existing_names = []
+        else:
             # get list of pre-existing environments
-            env_list_output = self.run_cmd(
+            env_list_output = self.run_env_manager_cmd(
                 f"{self.env_manager.executable} env list --json",
                 capture_output=True,
             )
@@ -640,7 +676,7 @@ class Installer:
 
             base_prefix = list(
                 json.loads(
-                    self.run_cmd(
+                    self.run_env_manager_cmd(
                         f"{self.env_manager.executable} info --base --json",
                         capture_output=True,
                     ).stdout
@@ -650,8 +686,6 @@ class Installer:
             existing_names = [str(Path(e).stem) for e in existing_prefixes]
             if len(existing_names) > 0:
                 print(f"Existing environments: {', '.join(existing_names)}")
-        else:
-            existing_names = []
 
         if env_name is not None:
             if check_env_name(env_name, existing_names):
@@ -701,7 +735,7 @@ class Installer:
 
         as_comment = False
         if self.dry_run:
-            if self.env_manager_preinitialized:
+            if self.env_manager_preinstalled:
                 create_env_cmd += " --dry-run"
             else:
                 as_comment = True
