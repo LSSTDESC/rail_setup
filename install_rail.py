@@ -45,6 +45,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+__version__ = "v0.0.7"
+
 #  --- Modified from install-poetry.py ---
 FOREGROUND_COLORS = {
     "red": 31,
@@ -1207,6 +1209,7 @@ def main() -> int:
         dest="verbose",
         action="store_true",
     )
+    parser.add_argument("--version", action="version", version=__version__)
 
     env_manager_args = parser.add_argument_group(
         "Python Virtual Environment Manager",
@@ -1250,6 +1253,7 @@ def main() -> int:
     fetcher = check_requirements()
     args.rail_packages = check_algorithms_selection(args.rail_packages)
 
+    print_header("RAIL Installation Script")
     installer = Installer(fetcher=fetcher, dry_run=args.dry_run, verbose=args.verbose)
     installer.run(
         env_manager_to_install=args.to_install,

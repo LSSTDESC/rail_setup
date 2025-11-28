@@ -1,6 +1,6 @@
 [project]
 name    = "rail-installation-script"
-version = "0.0.6"
+dynamic = ["version"]                # stored in the install script itself
 
 [tool.isort]
 profile = "black"
