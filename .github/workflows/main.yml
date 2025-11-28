@@ -83,7 +83,7 @@ jobs:
           make_latest: true # can't be combined w/ prerelease/draft
           body: "
             To test out the RAIL installation script, download and run the below
-            `install_rail.py`.
+            `install_rail.py`. Please use the `--verbose` flag to provide additional context.
             "
           files: |
             install_rail.py
