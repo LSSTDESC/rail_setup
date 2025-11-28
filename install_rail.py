@@ -119,6 +119,10 @@ ERROR_ENV_MANAGER_ALREADY_INSTALLED = """
 Requested installation of `{to_install}` but `{already_installed}` was already found on
 the system.
 """
+ERROR_CONDA_TOS = """
+An error occurred accepting the Anaconda Terms of Service. Please install conda
+manually, and run the script again.
+"""
 ERROR_ENV_MANAGER_OUT_OF_DATE = """
 The installed version of `{env_manager}` ({present}) is out of date, at least {required} is
 required. Please manually upgrade or remove it.
@@ -482,7 +486,6 @@ class Installer:
                 [e for e in ENV_MANAGER_INFO if e.name == name_to_install][0]
             )
 
-        self.setup_env_manager()
         self.check_env_manager_version()
 
     def install_env_manager(self, to_install: EnvironmentManager) -> None:
@@ -519,24 +522,28 @@ class Installer:
             print(f"\nRemoving {to_install.name} installer")
             installer_path.unlink()
 
-        # update env_manager properties
+        # save configuration
         self.env_manager = to_install
 
-    def setup_env_manager(self) -> None:
-        """Run preparatory steps to be able to use a Python environment manager."""
+        # do other setup steps
 
-        print_header(f"Initializing {self.env_manager.executable}")
-        if self.env_manager.executable == "conda":
-            # accept TOS
+        # accept conda TOS if we just installed it
+        if to_install.name == "miniconda":
             for channel in [
                 "https://repo.anaconda.com/pkgs/main",
                 "https://repo.anaconda.com/pkgs/r",
             ]:
-                self.run_env_manager_cmd(
+                output = self.run_env_manager_cmd(
                     f"conda tos accept --override-channels --channel {channel}",
                     as_comment=self.dry_run,
+                    acceptable_errorcodes=(2),
                 )
-        elif self.env_manager.executable == "mamba":
+                if output.returncode == 2:
+                    raise RAILInstallationError(ERROR_CONDA_TOS)
+
+        # run mamba shell init if we just installed it
+        # non-interactive mamba install will never run shell init scripts
+        if to_install.name == "mamba":
             shell = str(Path(os.environ["SHELL"]).stem)
             cmd, as_comment = f"mamba shell init --shell {shell}", False
             if self.dry_run:
@@ -545,8 +552,6 @@ class Installer:
                 else:
                     as_comment = True
             self.run_env_manager_cmd(cmd, as_comment=as_comment)
-        elif self.env_manager.executable == "micromamba":
-            pass
 
     def check_env_manager_version(self) -> None:
         """Checks that the installed version of whichever Python environment manager is
@@ -806,7 +811,10 @@ class Installer:
 
 
 def run_cmd(
-    cmd: str, as_comment: bool = False, **kwargs: Any
+    cmd: str,
+    as_comment: bool = False,
+    acceptable_errorcodes: tuple[int, ...] = (),
+    **kwargs: Any,
 ) -> subprocess.CompletedProcess[str]:
     """Run a command in a sub-shell
 
@@ -835,7 +843,7 @@ def run_cmd(
 
     output = subprocess.run(cmd, shell=True, encoding="utf-8", check=False, **kwargs)
 
-    if output.returncode != 0:
+    if output.returncode != 0 and output.returncode not in acceptable_errorcodes:
 
         error_message = "CLI command failed"
         if output.stdout is not None or output.stderr is not None:
