@@ -135,6 +135,12 @@ visit the RAIL documentation on minimum requirements.
 Working with the RAIL virtual environment requires at least 4GiB of RAM, and 5GiB of free storage.
 """  # TODO: add further RAIL documentation and link
 
+MESSAGE_STRANGE_ENV_MANAGER_FOUND = """
+Found `{env_manager}`, but couldn't find an activation script. Proceeding with RAIL
+installation, but please report this to the installation script maintainers, along with
+the output of `{env_manager} info`, the version of this script used, and any additional
+information regarding your {env_manager} environment.
+"""
 MESSAGE_ENV_MANAGER_FOUND = """
 Using `{env_manager_command}` at path {env_manager_path} with
 activation script located at path {activation_script_path}
@@ -463,7 +469,12 @@ class Installer:
                 break
             if in_path and activation_script is None:
                 print(
-                    f"Found {env_manager.executable} but couldn't find the activation script."
+                    colorize(
+                        "error",
+                        MESSAGE_STRANGE_ENV_MANAGER_FOUND.format(
+                            env_manager=env_manager.executable,
+                        ),
+                    )
                 )
                 self.env_manager = env_manager
                 self.env_manager.activation_script = activation_script
@@ -479,7 +490,6 @@ class Installer:
         if self.env_manager is not None:
             self.env_manager_preinstalled = True
             # print success message
-            print("Found a pre-installed Python virtual environment manager")
             if self.env_manager.needs_activation:
                 executable_path = self.run_env_manager_cmd(
                     f"which {self.env_manager.executable}", capture_output=True
