@@ -731,7 +731,7 @@ class Installer:
         print_header(
             f"Creating a new {self.env_manager.executable} environment, this may take up to 10 minutes"
         )
-        create_env_cmd = f"{self.env_manager.executable} env create --name {self.env_name} --file {lockfile_name} --yes"
+        create_env_cmd = f"{self.env_manager.executable} create --name {self.env_name} --file {lockfile_name} --yes"
 
         as_comment = False
         if self.dry_run:
