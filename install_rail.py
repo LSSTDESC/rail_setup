@@ -32,6 +32,8 @@ if sys.version_info < (3, 10):
     sys.stdout.write("RAIL installer requires Python 3.10 or newer to run!\n")
     sys.exit(1)
 #  ------
+# Note that due to the presence of f-strings, the script will SyntaxError before this
+# point on Python 3.5 and below
 
 import argparse
 import json
