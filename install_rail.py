@@ -161,11 +161,12 @@ https://docs.conda.io/projects/conda/en/stable/commands/env/remove.html
 Note that if this script was halted partway through environment creation, environment
 removal may be less straightforward
 """
-MESSAGE_POST_INSTALL = (
-    """
+MESSAGE_POST_INSTALL_ENV_MANAGER = """
 To use the newly installed environment manager {env_manager}, restart your terminal
 session or activate your shell's init script (with `{source_cmd}` or similar).
-
+"""
+MESSAGE_POST_INSTALL_ENV = (
+    """
 To enter the {env_name} virtual environment, run: `{activation_cmd}`
 
 To install additional packages:
@@ -816,9 +817,12 @@ class Installer:
             self.run_in_env_cmd("pip cache purge")  # brings size down from 4.4G
 
         print_header(colorize("highlight", "Installation complete!"))
+        env_manger = colorize("cmd", self.env_manager.executable)
+        if not self.env_manager_preinstalled:
+            print(MESSAGE_POST_INSTALL_ENV_MANAGER.format(env_manager=env_manger))
         print(
-            MESSAGE_POST_INSTALL.format(
-                env_manager=colorize("cmd", self.env_manager.executable),
+            MESSAGE_POST_INSTALL_ENV.format(
+                env_manager=env_manger,
                 source_cmd=colorize("cmd", "source ~/.bashrc"),
                 env_name=colorize("highlight", self.env_name),
                 activation_cmd=colorize(
