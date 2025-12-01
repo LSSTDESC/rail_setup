@@ -1253,11 +1253,12 @@ def main() -> int:
 
     # pre-run checks
     args = parser.parse_args()
+
+    print_header(colorize("highlight", f"RAIL Installation Script {__version__}"))
     check_uname()
     fetcher = check_requirements()
     args.rail_packages = check_algorithms_selection(args.rail_packages)
 
-    print_header("RAIL Installation Script")
     installer = Installer(fetcher=fetcher, dry_run=args.dry_run, verbose=args.verbose)
     installer.run(
         env_manager_to_install=args.to_install,
