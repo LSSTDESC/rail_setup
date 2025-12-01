@@ -1194,20 +1194,6 @@ def main() -> int:
         action="store_true",
     )
     parser.add_argument(
-        "--clean",
-        help="""CLI-only option, intended for containerization. Clear conda and pip
-             caches post-install""",
-        dest="clean",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--local-lockfiles",
-        help="""CLI-only option, intended for containerization. Only uses locally
-             available lockfiles to generate the Conda environment""",
-        dest="local_lockfiles",
-        action="store_true",
-    )
-    parser.add_argument(
         "--verbose",
         help="Display additional output",
         dest="verbose",
@@ -1249,6 +1235,25 @@ def main() -> int:
         dest="rail_packages",
         action="store",
         nargs="*",
+    )
+
+    advanced_args = parser.add_argument_group(
+        "Non-Interactive Options",
+        """These flags can only be set when calling the script. They are intended for
+        use in creating containerized installations of RAIL, and should not generally be
+        used""",
+    )
+    advanced_args.add_argument(
+        "--clean",
+        help="Clear conda and pip caches post-install",
+        dest="clean",
+        action="store_true",
+    )
+    advanced_args.add_argument(
+        "--local-lockfiles",
+        help="Only uses locally available lockfiles to generate the Conda environment",
+        dest="local_lockfiles",
+        action="store_true",
     )
 
     # pre-run checks
