@@ -47,7 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__version__ = "v0.0.8"
+__version__ = "v0.0.9"
 
 #  --- Modified from install-poetry.py ---
 FOREGROUND_COLORS = {
@@ -821,11 +821,14 @@ class Installer:
         print_header(colorize("highlight", "Installation complete!"))
         env_manger = colorize("cmd", self.env_manager.executable)
         if not self.env_manager_preinstalled:
-            print(MESSAGE_POST_INSTALL_ENV_MANAGER.format(env_manager=env_manger))
+            print(
+                MESSAGE_POST_INSTALL_ENV_MANAGER.format(
+                    env_manager=env_manger,
+                    source_cmd=colorize("cmd", "source ~/.bashrc"),
+                )
+            )
         print(
             MESSAGE_POST_INSTALL_ENV.format(
-                env_manager=env_manger,
-                source_cmd=colorize("cmd", "source ~/.bashrc"),
                 env_name=colorize("highlight", self.env_name),
                 activation_cmd=colorize(
                     "cmd", f"{self.env_manager.executable} activate {self.env_name}"
