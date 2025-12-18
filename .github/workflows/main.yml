@@ -49,6 +49,30 @@ jobs:
           name: ${{env.artifact-lockfiles}}
           path: conda-*.lock
 
+  make-release:
+    runs-on: ubuntu-latest
+    needs: build-docker
+    steps:
+      # setup
+      - uses: actions/checkout@v6
+      - name: Download lockfile artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{env.artifact-lockfiles}}
+      # release
+      - uses: softprops/action-gh-release@v2.4.2
+        with:
+          make_latest: true # can't be combined w/ prerelease/draft
+          body: "
+            To test out the RAIL installation script, download and run the below
+            `install_rail.py`. When debugging, use the `--verbose` flag to provide
+            additional context.
+            "
+          files: |
+            install_rail.py
+            conda-linux-64.lock
+            conda-osx-arm64.lock
+
   build-docker:
     runs-on: ubuntu-latest
     needs: build-lockfiles
@@ -60,46 +84,15 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: ${{env.artifact-lockfiles}}
+      # log in to the github registry
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       # build
       - uses: docker/build-push-action@v6
         with:
           context: . # use the current filesystem instead of a fresh checkout
-          push: false
+          push: true
           tags: ${{env.image-tag}}
-          outputs: type=docker,dest=${{env.image-tarball}}
-      # upload
-      - name: Upload docker image artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: ${{env.artifact-docker-image}}
-          path: ${{env.image-tarball}}
-
-  make-release:
-    runs-on: ubuntu-latest
-    needs: build-docker
-    steps:
-      # setup
-      - uses: actions/checkout@v6
-      - name: Download lockfile artifacts
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{env.artifact-lockfiles}}
-      - name: Download docker image artifact
-        uses: actions/download-artifact@v6
-        with:
-          name: ${{env.artifact-docker-image}}
-      # release
-      - uses: softprops/action-gh-release@v2.4.2
-        with:
-          make_latest: true # can't be combined w/ prerelease/draft
-          body: "
-            To test out the RAIL installation script, download and run the below
-            `install_rail.py`. Please use the `--verbose` flag to provide additional context.
-            "
-          files: |
-            install_rail.py
-            conda-linux-64.lock
-            conda-osx-arm64.lock
-
-          # ${{env.image-tarball}} # don't upload this as an artifact, we'll upload it
-          # to the LSST package archive when possible
