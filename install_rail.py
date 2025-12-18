@@ -735,7 +735,7 @@ class Installer:
         # files, so conda can't use these directly
         if not local_lockfiles:
             lockfile_url_base = (
-                "https://github.com/sidratresearch/rail_setup/releases/latest/download"
+                "https://github.com/lsstdesc/rail_setup/releases/latest/download"
             )
             remote_lockfile_name = lockfile_name
             lockfile_name = f"install_rail.{lockfile_name}"  # attempt to avoid name collision with existing files
