@@ -95,4 +95,4 @@ jobs:
         with:
           context: . # use the current filesystem instead of a fresh checkout
           push: true
-          tags: ${{env.image-tag}}
+          tags: ghcr.io/${{env.image-tag}}
