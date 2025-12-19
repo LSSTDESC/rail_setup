@@ -47,7 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__version__ = "v0.0.10"
+__version__ = "v0.1.0"
 
 #  --- Modified from install-poetry.py ---
 FOREGROUND_COLORS = {

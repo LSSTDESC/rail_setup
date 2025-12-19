@@ -208,3 +208,6 @@ __marimo__/
 
 # GitHub Actions test files
 .artifacts/
+
+# VS Code
+.vscode/
