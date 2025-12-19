@@ -1,0 +1,70 @@
+repos:
+  ###### Hooks not related to main code ######
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # linter for gh actions
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9
+    hooks:
+      - id: actionlint-system # requires separate installation of actionlint
+        entry: actionlint -shellcheck=
+
+  # validate pyproject
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: "v0.24.1"
+    hooks:
+      - id: validate-pyproject
+        # Optional extra validations from SchemaStore:
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
+
+  ###### Python hooks (slow items last) ######
+
+  # black
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
+    rev: 25.9.0
+    hooks:
+      - id: black
+
+  # isort
+  - repo: https://github.com/pycqa/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+
+  # pydocstringformatter
+  - repo: https://github.com/DanielNoord/pydocstringformatter
+    rev: v0.7.5
+    hooks:
+      - id: pydocstringformatter
+        entry: |
+          pydocstringformatter --write \
+            --style=pep257 --style=numpydoc \
+            --linewrap-full-docstring \
+            --max-summary-lines=2
+
+  # mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.18.2" # Use the sha / tag you want to point at
+    hooks:
+      - id: mypy
+
+  # pylint
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        require_serial: true
+        args: [
+            "--score=false", # Don't display the score
+            "--reports=n", # Only display messages
+          ]
