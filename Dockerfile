@@ -29,17 +29,24 @@ COPY conda-osx-arm64.lock conda-osx-arm64.lock
 
 # run the rail install script
 RUN ./install_rail.py \
-        --install-conda $RAIL_CONDA \
-        --env-name $RAIL_ENV \
-        --rail-packages all \
-        --install-devtools yes \
-        --verbose --clean --local-lockfiles
+    --install-conda $RAIL_CONDA \
+    --env-name $RAIL_ENV \
+    --rail-packages all \
+    --install-devtools yes \
+    --verbose --clean --local-lockfiles
 
 # cleanup after running
 RUN rm install_rail.py
 RUN rm conda-linux-64.lock
 RUN rm conda-osx-arm64.lock
 
+
+# Adding python bin directory to the path
+ENV PATH="/home/lsst/miniforge3/envs/rail/bin/:${PATH}"
+
 # prepare for interactive use
 RUN echo "\n\n$RAIL_CONDA activate base\n$RAIL_CONDA activate $RAIL_ENV" >> ~/.bashrc
-CMD ["/bin/bash"]
+
+# Running Jupyter Notebook Automatically
+EXPOSE 8888
+CMD ["jupyter", "notebook", "--port=8888"]
