@@ -47,7 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__version__ = "v1.0.2"
+__version__ = "v1.0.3"
 
 #  --- Modified from install-poetry.py ---
 FOREGROUND_COLORS = {
@@ -104,14 +104,11 @@ Missing prerequisite(s): {missing}
 
 See the RAIL documentation page on required programs for more information.
 """  # TODO: add further RAIL documentation and link
-ERROR_NO_CLANG = """
-Only GNU versions of C compilers are supported, but `{version_command}` found an LLVM
-(clang) compiler.
+ERROR_C_COMPILER = """
+No `gcc` command was found. Install gcc or, if clang is installed, set the C compiler
+environment variable and re-run the script.
 
-Install the GNU versions (e.g., with Homebrew on MacOS), and set the C compiler
-environment variable(s) accordingly before re-running the script.
-
-`CC=/path/to/gnu/gcc CXX=/path/to/gnu/g++ ./install-rail.py`
+`CC=/path/to/clang ./install-rail.py`
 """
 ERROR_NONINTERACTIVE_INPUT = """
 User input needed, but output device is not a tty. To run the RAIL installation script
@@ -1025,11 +1022,19 @@ def check_requirements() -> str:
     """
     print_header("Checking installation requirements")
 
-    required = ["bash", "gcc", "gfortran", "g++", "make"]
+    required = [
+        "bash",
+        "gfortran",  # possible that gfortran is no longer required (2026-11)
+        "make",
+    ]
     missing = []
     for cmd in required:
         if shutil.which(cmd) is None:
             missing.append(cmd)
+
+    # we need the `gcc` command or $CC, it's okay if it's actually clang
+    if shutil.which("gcc") is None and os.getenv("CC") is None:
+        raise RAILInstallationError(ERROR_C_COMPILER)
 
     required_options = [["curl", "wget"]]
     for alternatives in required_options:
@@ -1042,19 +1047,6 @@ def check_requirements() -> str:
             ERROR_MISSING_PREREQUISITES.format(missing=", ".join(missing)),
             return_code=127,
         )
-
-    # check that c compilers are gnu, as required by some dependencies (namely treecorr)
-    for compiler in [os.environ.get("CC", "gcc"), os.environ.get("CXX", "g++")]:
-        version_command = f"{compiler} --version"
-        version_output = run_cmd(
-            version_command,
-            capture_output=True,
-        ).stdout
-
-        if "clang" in version_output:
-            raise RAILInstallationError(
-                ERROR_NO_CLANG.format(version_command=version_command)
-            )
 
     fetcher = "wget" if shutil.which("wget") is not None else "curl"
 
