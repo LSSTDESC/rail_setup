@@ -68,6 +68,7 @@ jobs:
             `install_rail.py`. When debugging, use the `--verbose` flag to provide
             additional context.
             "
+          append_body: true
           files: |
             install_rail.py
             conda-linux-64.lock
