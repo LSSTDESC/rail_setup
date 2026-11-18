@@ -47,7 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-__version__ = "v1.0.3"
+__version__ = "v1.1.0"
 
 #  --- Modified from install-poetry.py ---
 FOREGROUND_COLORS = {
@@ -82,6 +82,7 @@ def colorize(style_name: str, text: str) -> str:
 #  ------
 
 RAIL_COLORIZED = colorize("highlight", "RAIL")
+PYTHON_VERSIONS = ["3.12", "3.13", "3.14"]
 EXTRA_RAIL_PACKAGES = [
     "pz-rail-astro-tools",
     "pz-rail-bpz",
@@ -174,7 +175,7 @@ To install additional packages:
 
 In the environment you also have access to the rail cli.
 """
-    + f"""Run `{colorize('cmd','rail --help')}` and visit the documentation:
+    f"""Run `{colorize('cmd','rail --help')}` and visit the documentation:
 https://rail-hub.readthedocs.io/en/latest/source/rail_cli.html"""
 )
 
@@ -235,7 +236,8 @@ ENV_MANAGER_INFO = [
 
 class RAILInstallationError(RuntimeError):
     """Custom error to provide a user-friendly error message and exit code rather than a
-    traceback"""
+    traceback
+    """
 
     def __init__(self, message: str, return_code: int = 1) -> None:
         if not message.startswith("\n"):
@@ -274,7 +276,6 @@ class Installer:
         tuple[str, str]
             (kernel, architecture)
         """
-
         kernel, architecture = "", ""
         if use_case == "conda":
             # https://repo.anaconda.com/miniconda/
@@ -347,7 +348,6 @@ class Installer:
         RAILInstallationError
             Raised if the script can't find the environment manager
         """
-
         if self.env_manager.needs_activation:
             return self.run_cmd(
                 f". {self.env_manager.activation_script} && {cmd}", **kwargs
@@ -369,7 +369,6 @@ class Installer:
         """Wrapper around `Installer.run_env_manager_cmd` for running commands inside a
         Python virtual environment.
         """
-
         full_command = """{env_manager} run {output_handle} --name {env_name} {cmd}"""
         return self.run_env_manager_cmd(
             full_command.format(
@@ -454,7 +453,6 @@ class Installer:
             Raised if an environment manager was requested to be installed but one is
             installed already
         """
-
         print_header("Checking for a pre-installed Python virtual environment manager")
 
         for env_manager in ENV_MANAGER_INFO:
@@ -518,9 +516,7 @@ class Installer:
 
         else:  # install a new env manager
             executables = {e.executable for e in ENV_MANAGER_INFO}
-            executable_string = "/".join(
-                [colorize("cmd", exec) for exec in executables]
-            )
+            executable_string = "/".join([colorize("cmd", e) for e in executables])
             print(MESSAGE_NO_ENV_MANAGER_FOUND.format(executables=executable_string))
 
             if name_to_install is None:
@@ -530,15 +526,15 @@ class Installer:
                 )
 
             self.install_env_manager(
-                [e for e in ENV_MANAGER_INFO if e.name == name_to_install][0]
+                next(e for e in ENV_MANAGER_INFO if e.name == name_to_install)
             )
 
         self.check_env_manager_version()
 
     def install_env_manager(self, to_install: EnvironmentManager) -> None:
         """Downloads and installs either miniconda or mamba, based on previous user
-        selection."""
-
+        selection.
+        """
         print_header(f"Installing {to_install.name}")
 
         kernel, architecture = self.uname_convert(to_install.executable)
@@ -615,17 +611,12 @@ class Installer:
         RAILInstallationError
             Raised if the version is too old.
         """
-
         print_header(f"Verifying {self.env_manager.executable} version")
         fake_version = self.dry_run and not self.env_manager_preinstalled
 
         version_cmd, required_version_string = "", ""
         output_to_version = lambda output: ""
-        if self.env_manager.executable == "conda":
-            version_cmd = "conda --version"
-            output_to_version = lambda output: output[output.rindex(" ") + 1 :]
-            required_version_string = "23.5.0"
-        elif self.env_manager.executable == "mamba":
+        if self.env_manager.executable in {"conda", "mamba"}:
             version_cmd = "conda --version"
             output_to_version = lambda output: output[output.rindex(" ") + 1 :]
             required_version_string = "23.5.0"
@@ -671,7 +662,6 @@ class Installer:
         RAILInstallationError
             Raised if an invalid name was given as a command line parameter
         """
-
         print_header("Getting virtual environment name")
 
         # for a dry run where the script installed conda, we can't check for
@@ -686,14 +676,16 @@ class Installer:
             )
             existing_prefixes = json.loads(env_list_output.stdout)["envs"]
 
-            base_prefix = list(
-                json.loads(
-                    self.run_env_manager_cmd(
-                        f"{self.env_manager.executable} info --base --json",
-                        capture_output=True,
-                    ).stdout
-                ).values()
-            )[0]
+            base_prefix = next(
+                iter(
+                    json.loads(
+                        self.run_env_manager_cmd(
+                            f"{self.env_manager.executable} info --base --json",
+                            capture_output=True,
+                        ).stdout
+                    ).values()
+                )
+            )
             existing_prefixes = [e for e in existing_prefixes if e != base_prefix]
             existing_names = [str(Path(e).stem) for e in existing_prefixes]
             if len(existing_names) > 0:
@@ -717,15 +709,19 @@ class Installer:
                 validator=lambda name: check_env_name(name, existing_names),
             )
 
-    def create_env(self, local_lockfiles: bool) -> None:
+    def create_env(self, python_version: str | None, local_lockfiles: bool) -> None:
         """Create a new Python virtual environment with the RAIL environment.yml
 
         If possible, a lockfile is used to reduce the time spent running the environment
         solver.
         """
-
+        if python_version is None:
+            python_version = request_input(
+                "Version of Python to use for the new environment:",
+                options=PYTHON_VERSIONS,
+            )
         kernel, architecture = self.uname_convert("conda-lock")
-        lockfile_name = f"conda-{kernel}-{architecture}.lock"
+        lockfile_name = f"conda-{kernel}-{architecture}-py{python_version}.lock"
 
         # download lock file from github
         # necessary since the release links open a download popup instead of giving raw
@@ -774,9 +770,8 @@ class Installer:
         devtool_selection : str, optional
             "yes" or "no", by default None
         """
-
         print_header(f"Adding {RAIL_COLORIZED} packages to environment")
-        rail_packages = ["pz-rail"] + choose_algorithms(rail_selection)
+        rail_packages = ["pz-rail", *choose_algorithms(rail_selection)]
         grouped_packages = choose_additional_dependencies(devtool_selection)
 
         print(f"Installing `{colorize('cmd','pip')}` packages")
@@ -794,7 +789,6 @@ class Installer:
         package : str
             The package or packages to install
         """
-
         quiet = "" if self.verbose else " --quiet"
         pip_cmd = f"pip install {package}{quiet}"
 
@@ -808,7 +802,6 @@ class Installer:
         clean : bool
             Whether on not to run the cleaning, from CLI only
         """
-
         if clean:
             self.run_in_env_cmd(
                 "conda clean --all --yes"
@@ -841,17 +834,19 @@ class Installer:
         self,
         env_manager_to_install: str | None,
         env_name: str | None,
+        python_version: str | None,
         local_lockfiles: bool,
         rail_selection: str | list[str] | None,
         devtool_selection: str | None,
         clean: bool,
     ) -> None:
         """Run all Installer steps in sequence"""
-
         try:
             self.find_env_manager(name_to_install=env_manager_to_install)
             self.choose_env_name(env_name=env_name)
-            self.create_env(local_lockfiles=local_lockfiles)
+            self.create_env(
+                python_version=python_version, local_lockfiles=local_lockfiles
+            )
             self.pip_install(
                 rail_selection=rail_selection, devtool_selection=devtool_selection
             )
@@ -887,7 +882,6 @@ def run_cmd(
     RAILInstallationError
         Raised if the command errors out
     """
-
     if as_comment:
         cmd = "# " + cmd
 
@@ -924,7 +918,6 @@ def run_cmd(
 
 def check_uname() -> None:
     """Validate the platform the script is running on"""
-
     #  --- From install-poetry.py ---
     windows = sys.platform.startswith("win") or (
         sys.platform == "cmd" and os.name == "nt"
@@ -980,7 +973,6 @@ def request_input(
     str
         One of the `options` that was chosen.
     """
-
     if not sys.stdout.isatty():
         raise RAILInstallationError(ERROR_NONINTERACTIVE_INPUT.format(prompt=prompt))
 
@@ -1032,16 +1024,26 @@ def check_requirements() -> str:
         if shutil.which(cmd) is None:
             missing.append(cmd)
 
-    # we need the `gcc` command or $CC, it's okay if it's actually clang
-    if shutil.which("gcc") is None and os.getenv("CC") is None:
-        raise RAILInstallationError(ERROR_C_COMPILER)
-
     required_options = [["curl", "wget"]]
     for alternatives in required_options:
         missing_fetcher = [shutil.which(cmd) is None for cmd in alternatives]
         if all(missing_fetcher):
             missing.append(" or ".join(alternatives))
 
+    # we need the `gcc` command or $CC, it's okay if it's actually clang
+    raise_gcc = shutil.which("gcc") is None and os.getenv("CC") is None
+    if raise_gcc and len(missing) > 0:
+        missing.append("gcc")
+        raise RAILInstallationError(
+            (
+                ERROR_MISSING_PREREQUISITES.format(missing=", ".join(missing))
+                + "\n"
+                + ERROR_C_COMPILER
+            ),
+            return_code=127,
+        )
+    if raise_gcc:
+        raise RAILInstallationError(ERROR_C_COMPILER)
     if len(missing) > 0:
         raise RAILInstallationError(
             ERROR_MISSING_PREREQUISITES.format(missing=", ".join(missing)),
@@ -1055,7 +1057,6 @@ def check_requirements() -> str:
 
 def check_env_name(name: str, existing_names: list[str]) -> bool:
     """Check if the requested environment name already exists"""
-
     if name in existing_names:
         print(MESSAGE_ENV_EXISTS.format(name=colorize("highlight", name)))
         return False  # not ok, need to rerun
@@ -1083,7 +1084,6 @@ def check_algorithms_selection(
     RAILInstallationError
         Raised if an invalid selection is made on the CLI
     """
-
     if cli_selection is None:
         return None
     if len(cli_selection) == 1 and cli_selection[0] in ["all", "none"]:
@@ -1113,7 +1113,6 @@ def choose_algorithms(cli_selection: None | str | list[str]) -> list[str]:
     list[str]
         List of packages, can be empty
     """
-
     if cli_selection is None:
         algos_string = "\n\t".join(EXTRA_RAIL_PACKAGES)
         print(f"Available {RAIL_COLORIZED} algorithms:\n\t{algos_string}")
@@ -1150,7 +1149,6 @@ def choose_additional_dependencies(cli_selection: None | str) -> list[str]:
     list[str]
         List of packages to install. May be empty
     """
-
     packages = ["jupyter", "seaborn", "corner", "matplotlib"]
 
     if (cli_selection == "yes") or (
@@ -1166,7 +1164,6 @@ def choose_additional_dependencies(cli_selection: None | str) -> list[str]:
 
 def print_header(message: str) -> None:
     """Print a message in a distinct header format"""
-
     max_width = shutil.get_terminal_size()[0]
     decolorize = re.compile(r"\x1B\[[0-?9;]*[mK]")
     message_length = len(decolorize.sub("", message))
@@ -1177,7 +1174,6 @@ def print_header(message: str) -> None:
 
 def main() -> int:
     """Main module function"""
-
     parser = argparse.ArgumentParser(
         description="""Creates a new Python virtual environment and installs RAIL into
                     it. Selections not set on the command line will be requested
@@ -1217,6 +1213,12 @@ def main() -> int:
         help="Name of new virtual environment",
         dest="env_name",
         action="store",
+    )
+    environment_args.add_argument(
+        "--python-version",
+        help="Version of Python to use",
+        dest="python_version",
+        choices=PYTHON_VERSIONS,
     )
     environment_args.add_argument(
         "--install-devtools",
@@ -1265,6 +1267,7 @@ def main() -> int:
     installer.run(
         env_manager_to_install=args.to_install,
         env_name=args.env_name,
+        python_version=args.python_version,
         local_lockfiles=args.local_lockfiles,
         rail_selection=args.rail_packages,
         devtool_selection=args.install_devtools,
