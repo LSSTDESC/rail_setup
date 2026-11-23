@@ -1016,7 +1016,7 @@ def check_requirements() -> str:
 
     required = [
         "bash",
-        "gfortran",  # possible that gfortran is no longer required (2026-11)
+        "gfortran",  # possible that gfortran is no longer required, but more testing is needed (2026-11)
         "make",
     ]
     missing = []
