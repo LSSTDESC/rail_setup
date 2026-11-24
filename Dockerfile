@@ -24,21 +24,20 @@ WORKDIR /home/$LSST_USER
 # prepare to run the installation script
 ENV SHELL=/bin/bash
 COPY install_rail.py install_rail.py
-COPY conda-linux-64.lock conda-linux-64.lock
-COPY conda-osx-arm64.lock conda-osx-arm64.lock
+COPY conda-*.lock /home/$LSST_USER
 
 # run the rail install script
 RUN ./install_rail.py \
     --install-conda $RAIL_CONDA \
     --env-name $RAIL_ENV \
+    --python-version 3.14 \
     --rail-packages all \
     --install-devtools yes \
     --verbose --clean --local-lockfiles
 
 # cleanup after running
 RUN rm install_rail.py
-RUN rm conda-linux-64.lock
-RUN rm conda-osx-arm64.lock
+RUN rm conda-*.lock
 
 
 # Adding python bin directory to the path
